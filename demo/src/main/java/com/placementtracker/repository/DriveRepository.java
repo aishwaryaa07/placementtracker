@@ -9,4 +9,5 @@ import java.util.List;
 public interface DriveRepository extends JpaRepository<Drive, Long> {
     List<Drive> findByStatus(DriveStatus status);
     List<Drive> findByCompanyId(Long companyId);
+    List<Drive> findByStatusNot(DriveStatus status);
 }

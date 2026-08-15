@@ -1,14 +1,18 @@
 package com.placementtracker.service;
 
+import com.placementtracker.User;
 import com.placementtracker.dto.DriveRequest;
 import com.placementtracker.dto.DriveResponse;
 import com.placementtracker.dto.DriveStatusUpdateRequest;
+import com.placementtracker.dto.StudentDriveResponse;
 import com.placementtracker.exception.ResourceNotFoundException;
 import com.placementtracker.model.Company;
 import com.placementtracker.model.Drive;
 import com.placementtracker.model.DriveStatus;
+import com.placementtracker.model.StudentProfile;
 import com.placementtracker.repository.CompanyRepository;
 import com.placementtracker.repository.DriveRepository;
+import com.placementtracker.repository.StudentProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +27,7 @@ public class DriveService {
 
     private final DriveRepository driveRepository;
     private final CompanyRepository companyRepository;
+    private final StudentProfileRepository studentProfileRepository;
 
     public DriveResponse create(DriveRequest request) {
         Drive drive = new Drive();
@@ -69,6 +74,22 @@ public class DriveService {
             throw new ResourceNotFoundException("No drive found with id " + id);
         }
         driveRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentDriveResponse> findOpenDrivesForStudent(User user) {
+        List<Drive> drives = driveRepository.findByStatusNot(DriveStatus.CLOSED);
+        StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElse(null);
+        return drives.stream()
+                .map(drive -> new StudentDriveResponse(drive, profile != null && drive.isEligibleFor(profile)))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public StudentDriveResponse findDriveForStudent(User user, Long driveId) {
+        Drive drive = getDriveOrThrow(driveId);
+        StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElse(null);
+        return new StudentDriveResponse(drive, profile != null && drive.isEligibleFor(profile));
     }
 
     private Drive getDriveOrThrow(Long id) {

@@ -1,6 +1,6 @@
 # demo
 
-Spring Boot backend for Placement Tracker. Implements JWT auth (register/login) and an admin API for managing companies, placement drives, and interview rounds. Student-facing endpoints (browsing drives, applying, tracking application status) don't exist yet.
+Spring Boot backend for Placement Tracker. Implements JWT auth (register/login), an admin API for managing companies, placement drives, and interview rounds, and a student API for maintaining a profile, browsing drives, and applying.
 
 ## Requirements
 
@@ -56,3 +56,12 @@ UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
 - `PUT,DELETE /api/admin/rounds/{roundId}`
 
 Drive request body: `{ "companyId", "role", "description", "ctc", "minCgpa", "eligibleBranches": [...], "applicationDeadline": "YYYY-MM-DD", "driveDate": "YYYY-MM-DD" }`.
+
+## Student API
+
+Everything under `/api/student/**` requires a token for a user with `role=STUDENT` (the default on registration).
+
+- `GET,PUT /api/student/profile` — body `{ "branch", "graduationYear", "cgpa", "phone", "resumeUrl" }`. `PUT` creates the profile on first call, updates it after. Applying to a drive requires a profile to exist first.
+- `GET /api/student/drives` / `GET /api/student/drives/{id}` — lists all non-`CLOSED` drives; each has an `eligible` flag computed from your profile's branch and CGPA against the drive's `eligibleBranches`/`minCgpa`
+- `POST /api/student/drives/{id}/apply` — rejected (`400`) if the drive is closed, its deadline has passed, you've already applied, or you're not eligible; on success, pre-creates a `PENDING` round result for each of the drive's rounds
+- `GET /api/student/applications` / `GET /api/student/applications/{id}` — your own applications only; other students' applications 404 rather than 403, so IDs can't be enumerated

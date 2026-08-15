@@ -68,4 +68,12 @@ public class Drive {
     @OneToMany(mappedBy = "drive", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sequence ASC")
     private List<Round> rounds = new ArrayList<>();
+
+    public boolean isEligibleFor(StudentProfile student) {
+        boolean branchOk = eligibleBranches == null || eligibleBranches.isEmpty()
+                || (student.getBranch() != null && eligibleBranches.contains(student.getBranch()));
+        boolean cgpaOk = minCgpa == null
+                || (student.getCgpa() != null && student.getCgpa().compareTo(minCgpa) >= 0);
+        return branchOk && cgpaOk;
+    }
 }
