@@ -1,5 +1,6 @@
 package com.placementtracker.service;
 
+import com.placementtracker.User;
 import com.placementtracker.dto.OfferRequest;
 import com.placementtracker.dto.OfferResponse;
 import com.placementtracker.dto.OfferStatusUpdateRequest;
@@ -8,6 +9,7 @@ import com.placementtracker.exception.ResourceNotFoundException;
 import com.placementtracker.model.Application;
 import com.placementtracker.model.ApplicationStatus;
 import com.placementtracker.model.Offer;
+import com.placementtracker.model.OfferStatus;
 import com.placementtracker.repository.ApplicationRepository;
 import com.placementtracker.repository.OfferRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +49,22 @@ public class OfferService {
     public OfferResponse updateStatus(Long offerId, OfferStatusUpdateRequest request) {
         Offer offer = offerRepository.findById(offerId)
                 .orElseThrow(() -> new ResourceNotFoundException("No offer found with id " + offerId));
+        offer.setStatus(request.getStatus());
+        return new OfferResponse(offerRepository.save(offer));
+    }
+
+    public OfferResponse respondToOffer(User user, Long offerId, OfferStatusUpdateRequest request) {
+        Offer offer = offerRepository.findById(offerId)
+                .filter(o -> o.getApplication().getStudent().getUser().getId().equals(user.getId()))
+                .orElseThrow(() -> new ResourceNotFoundException("No offer found with id " + offerId));
+
+        if (request.getStatus() != OfferStatus.ACCEPTED && request.getStatus() != OfferStatus.DECLINED) {
+            throw new ApplicationNotAllowedException("You can only accept or decline an offer");
+        }
+        if (offer.getStatus() != OfferStatus.PENDING) {
+            throw new ApplicationNotAllowedException("You have already responded to this offer");
+        }
+
         offer.setStatus(request.getStatus());
         return new OfferResponse(offerRepository.save(offer));
     }
