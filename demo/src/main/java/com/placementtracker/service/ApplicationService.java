@@ -91,6 +91,18 @@ public class ApplicationService {
         return toResponse(application);
     }
 
+    @Transactional(readOnly = true)
+    public List<ApplicationResponse> findByDrive(Long driveId) {
+        return applicationRepository.findByDriveId(driveId).stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ApplicationResponse findById(Long applicationId) {
+        Application application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException("No application found with id " + applicationId));
+        return toResponse(application);
+    }
+
     private ApplicationResponse toResponse(Application application) {
         List<RoundResult> roundResults = roundResultRepository.findByApplicationId(application.getId());
         Offer offer = offerRepository.findByApplicationId(application.getId()).orElse(null);

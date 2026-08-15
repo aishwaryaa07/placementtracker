@@ -57,6 +57,13 @@ UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
 
 Drive request body: `{ "companyId", "role", "description", "ctc", "minCgpa", "eligibleBranches": [...], "applicationDeadline": "YYYY-MM-DD", "driveDate": "YYYY-MM-DD" }`.
 
+**Grading and offers:**
+
+- `GET /api/admin/drives/{driveId}/applications` / `GET /api/admin/applications/{id}` — view applications (any student's, unlike the student-facing endpoints which are self-only)
+- `PATCH /api/admin/round-results/{id}` — body `{ "status": "PENDING" | "PASSED" | "FAILED", "remarks" }`. Marking `FAILED` auto-sets the application to `REJECTED`; marking `PASSED` moves a fresh `APPLIED` application to `IN_PROGRESS`
+- `POST /api/admin/applications/{applicationId}/offer` — body `{ "ctcOffered", "offerDate": "YYYY-MM-DD" }` (`offerDate` defaults to today). One offer per application — a second attempt is rejected with `400`. Creating an offer sets the application to `SELECTED`
+- `PATCH /api/admin/offers/{id}/status` — body `{ "status": "PENDING" | "ACCEPTED" | "DECLINED" }`. There's no student-facing accept/decline endpoint yet — an admin records the outcome for now
+
 ## Student API
 
 Everything under `/api/student/**` requires a token for a user with `role=STUDENT` (the default on registration).
