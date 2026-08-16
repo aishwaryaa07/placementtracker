@@ -20,6 +20,12 @@ Or run the packaged jar:
 java -jar target/demo-0.0.1-SNAPSHOT.jar
 ```
 
+Run the test suite (integration tests against an in-memory H2 database — no Postgres/Docker needed):
+
+```bash
+./mvnw test
+```
+
 PostgreSQL setup:
 
 ```bash
