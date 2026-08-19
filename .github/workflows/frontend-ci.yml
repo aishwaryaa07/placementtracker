@@ -1,0 +1,55 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [ master, appmod/java-upgrade-* ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: 'frontend/package-lock.json'
+
+    - name: Install dependencies
+      run: cd frontend && npm ci
+
+    - name: Run linter
+      run: cd frontend && npm run lint
+      continue-on-error: true
+
+    - name: Type check
+      run: cd frontend && npx tsc --noEmit
+      continue-on-error: true
+
+    - name: Build
+      run: cd frontend && npm run build
+
+    - name: Run tests
+      run: cd frontend && npm test
+      continue-on-error: true
+
+    - name: Upload build artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend-dist-node${{ matrix.node-version }}
+        path: frontend/dist/

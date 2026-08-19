@@ -1,0 +1,49 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ master, appmod/java-upgrade-* ]
+    paths:
+      - 'demo/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'demo/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build with Maven
+      run: cd demo && mvn clean install -DskipTests
+
+    - name: Run tests
+      run: cd demo && mvn test
+
+    - name: Integration tests
+      run: cd demo && mvn verify
+
+    - name: SonarQube Scan (Optional)
+      env:
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        SONAR_LOGIN: ${{ secrets.SONAR_LOGIN }}
+      if: ${{ env.SONAR_HOST_URL != '' }}
+      run: cd demo && mvn clean verify sonar:sonar -Dsonar.projectKey=placementtracker-backend
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: backend-test-results
+        path: demo/target/surefire-reports/

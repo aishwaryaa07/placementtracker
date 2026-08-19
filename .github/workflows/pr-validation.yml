@@ -1,0 +1,64 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Validate commit messages
+      run: |
+        echo "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+        echo "Commits in PR: ${{ github.event.pull_request.commits }}"
+
+    - name: Check for required files
+      run: |
+        [ -f "demo/pom.xml" ] && echo "✓ Backend pom.xml found"
+        [ -f "frontend/package.json" ] && echo "✓ Frontend package.json found"
+        [ -f ".gitignore" ] && echo "✓ .gitignore found"
+
+    - name: Comment on PR
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '✅ CI/CD pipelines are running. Backend and frontend builds are in progress.'
+          })
+
+  backend-ci:
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: maven
+    - name: Build and test backend
+      run: cd demo && mvn clean verify
+
+  frontend-ci:
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: 'frontend/package-lock.json'
+    - name: Install and build frontend
+      run: cd frontend && npm ci && npm run build
