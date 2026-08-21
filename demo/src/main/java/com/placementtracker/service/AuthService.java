@@ -14,7 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
+@RequiredArgsConstructor//
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -27,7 +27,7 @@ public class AuthService {
             throw new EmailAlreadyExistsException(request.getEmail());
         }
 
-        User user = new User();
+        User user = new User();//creating a new user object
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
