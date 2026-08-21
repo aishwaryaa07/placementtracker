@@ -1,0 +1,78 @@
+name: Deploy to Azure (Optional)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up JDK 21
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+    
+    - name: Build JAR
+      run: cd demo && mvn clean package -DskipTests
+    
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+    
+    - name: Deploy to Azure App Service
+      uses: azure/webapps-deploy@v2
+      if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+      with:
+        app-name: placementtracker-backend-${{ inputs.environment }}
+        package: demo/target/*.jar
+        slot-name: ${{ inputs.environment }}
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: 'frontend/package-lock.json'
+    
+    - name: Build
+      run: cd frontend && npm ci && npm run build
+    
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+    
+    - name: Deploy to Azure Static Web Apps
+      uses: azure/static-web-apps-deploy@v1
+      if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+      with:
+        azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_TOKEN }}
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        action: 'upload'
+        app_location: '/frontend/dist'
+        app_artifact_location: 'dist'
