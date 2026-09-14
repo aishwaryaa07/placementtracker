@@ -20,4 +20,8 @@ public class RegisterRequest {
     @NotBlank
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
+
+    // Only meaningful when an Admin is creating an INTERVIEWER account - ignored on the
+    // public student self-registration path.
+    private Long companyId;
 }

@@ -57,5 +57,7 @@ public class CompanyService {
         company.setWebsite(request.getWebsite());
         company.setDescription(request.getDescription());
         company.setContactEmail(request.getContactEmail());
+        company.setLogoUrl(request.getLogoUrl());
+        company.setTrustedPartner(request.isTrustedPartner());
     }
 }

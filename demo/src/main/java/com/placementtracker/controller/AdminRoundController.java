@@ -1,7 +1,9 @@
 package com.placementtracker.controller;
 
+import com.placementtracker.dto.RoundFinalizeResultResponse;
 import com.placementtracker.dto.RoundRequest;
 import com.placementtracker.dto.RoundResponse;
+import com.placementtracker.service.RoundResultService;
 import com.placementtracker.service.RoundService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +24,7 @@ import java.util.List;
 public class AdminRoundController {
 
     private final RoundService roundService;
+    private final RoundResultService roundResultService;
 
     @PostMapping("/api/admin/drives/{driveId}/rounds")
     public ResponseEntity<RoundResponse> create(@PathVariable Long driveId, @Valid @RequestBody RoundRequest request) {
@@ -42,5 +45,10 @@ public class AdminRoundController {
     public ResponseEntity<Void> delete(@PathVariable Long roundId) {
         roundService.delete(roundId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/api/admin/rounds/{roundId}/finalize")
+    public RoundFinalizeResultResponse finalize(@PathVariable Long roundId) {
+        return roundResultService.finalizeRound(roundId);
     }
 }

@@ -1,4 +1,5 @@
 demo/target/
+demo/uploads/
 *.class
 *.log
 

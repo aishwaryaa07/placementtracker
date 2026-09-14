@@ -52,4 +52,19 @@ public abstract class AbstractIntegrationTest {
         userRepository.save(user);
         return token;
     }
+
+    // StudentProfileRequest requires branch/graduationYear/cgpa/phone/resumeUrl - this fills in
+    // realistic values for the fields a given test doesn't care about so profile setup doesn't
+    // get rejected by validation.
+    protected Map<String, Object> validProfile(String branch, double cgpa) {
+        return Map.of(
+                "branch", branch,
+                "graduationYear", 2026,
+                "cgpa", cgpa,
+                "phone", "+919876543210",
+                "resumeUrl", "https://example.com/resume.pdf",
+                "tenthMarksheetUrl", "https://example.com/10th.pdf",
+                "twelfthMarksheetUrl", "https://example.com/12th.pdf",
+                "recentSemesterCgpa", cgpa);
+    }
 }

@@ -40,4 +40,14 @@ public class StudentProfile {
 
     @Column(length = 500)
     private String resumeUrl;
+
+    @Column(length = 500)
+    private String tenthMarksheetUrl;
+
+    @Column(length = 500)
+    private String twelfthMarksheetUrl;
+
+    // Distinct from the overall `cgpa` above - the most recently completed semester's CGPA,
+    // not a cumulative figure.
+    private BigDecimal recentSemesterCgpa;
 }

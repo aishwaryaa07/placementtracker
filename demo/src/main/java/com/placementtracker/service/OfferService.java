@@ -33,6 +33,11 @@ public class OfferService {
         if (offerRepository.findByApplicationId(applicationId).isPresent()) {
             throw new ApplicationNotAllowedException("An offer already exists for this application");
         }
+        if (application.getStatus() == ApplicationStatus.REJECTED
+                || application.getStatus() == ApplicationStatus.WITHDRAWN) {
+            throw new ApplicationNotAllowedException(
+                    "Cannot create an offer for a " + application.getStatus().name().toLowerCase() + " application");
+        }
 
         Offer offer = new Offer();
         offer.setApplication(application);

@@ -11,6 +11,8 @@ public class CompanyResponse {
     private final String website;
     private final String description;
     private final String contactEmail;
+    private final String logoUrl;
+    private final boolean trustedPartner;
 
     public CompanyResponse(Company company) {
         this.id = company.getId();
@@ -18,5 +20,7 @@ public class CompanyResponse {
         this.website = company.getWebsite();
         this.description = company.getDescription();
         this.contactEmail = company.getContactEmail();
+        this.logoUrl = company.getLogoUrl();
+        this.trustedPartner = company.isTrustedPartner();
     }
 }

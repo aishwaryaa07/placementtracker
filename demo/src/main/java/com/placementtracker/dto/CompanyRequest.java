@@ -18,4 +18,8 @@ public class CompanyRequest {
 
     @Email
     private String contactEmail;
+
+    private String logoUrl;
+
+    private boolean trustedPartner;
 }

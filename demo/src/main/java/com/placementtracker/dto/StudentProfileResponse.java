@@ -5,6 +5,7 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 
+
 @Getter
 public class StudentProfileResponse {
 
@@ -16,6 +17,9 @@ public class StudentProfileResponse {
     private final BigDecimal cgpa;
     private final String phone;
     private final String resumeUrl;
+    private final String tenthMarksheetUrl;
+    private final String twelfthMarksheetUrl;
+    private final BigDecimal recentSemesterCgpa;
 
     public StudentProfileResponse(StudentProfile profile) {
         this.id = profile.getId();
@@ -26,5 +30,8 @@ public class StudentProfileResponse {
         this.cgpa = profile.getCgpa();
         this.phone = profile.getPhone();
         this.resumeUrl = profile.getResumeUrl();
+        this.tenthMarksheetUrl = profile.getTenthMarksheetUrl();
+        this.twelfthMarksheetUrl = profile.getTwelfthMarksheetUrl();
+        this.recentSemesterCgpa = profile.getRecentSemesterCgpa();
     }
 }
