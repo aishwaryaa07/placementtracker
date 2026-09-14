@@ -8,6 +8,7 @@ import com.placementtracker.model.Application;
 import com.placementtracker.model.Drive;
 import com.placementtracker.model.DriveStatus;
 import com.placementtracker.model.Offer;
+import com.placementtracker.model.Round;
 import com.placementtracker.model.RoundResult;
 import com.placementtracker.model.StudentProfile;
 import com.placementtracker.repository.ApplicationRepository;
@@ -70,7 +71,7 @@ public class ApplicationService {
         return new ApplicationResponse(saved, roundResults, null);
     }
 
-    @Transactional(readOnly = true)
+    // Not readOnly: toResponse() below self-heals missing round results, which writes.
     public List<ApplicationResponse> findMyApplications(User user) {
         return studentProfileRepository.findByUserId(user.getId())
                 .map(student -> applicationRepository.findByStudentId(student.getId()).stream()
@@ -79,7 +80,6 @@ public class ApplicationService {
                 .orElse(List.of());
     }
 
-    @Transactional(readOnly = true)
     public ApplicationResponse findMyApplicationById(User user, Long applicationId) {
         StudentProfile student = studentProfileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("No application found with id " + applicationId));
@@ -91,12 +91,10 @@ public class ApplicationService {
         return toResponse(application);
     }
 
-    @Transactional(readOnly = true)
     public List<ApplicationResponse> findByDrive(Long driveId) {
         return applicationRepository.findByDriveId(driveId).stream().map(this::toResponse).toList();
     }
 
-    @Transactional(readOnly = true)
     public ApplicationResponse findById(Long applicationId) {
         Application application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("No application found with id " + applicationId));
@@ -104,8 +102,29 @@ public class ApplicationService {
     }
 
     private ApplicationResponse toResponse(Application application) {
-        List<RoundResult> roundResults = roundResultRepository.findByApplicationId(application.getId());
+        syncRoundResults(application);
+        List<RoundResult> roundResults = roundResultRepository.findByApplicationIdOrderByRound_SequenceAsc(application.getId());
         Offer offer = offerRepository.findByApplicationId(application.getId()).orElse(null);
         return new ApplicationResponse(application, roundResults, offer);
+    }
+
+    // Self-heals any gap between the drive's current rounds and this application's
+    // round-result rows - covers a round added to the drive after the student applied, and
+    // (for data that predates this fix) rounds added before it existed at all. Idempotent:
+    // only ever inserts what's missing, never touches an existing result.
+    private void syncRoundResults(Application application) {
+        List<Round> rounds = application.getDrive().getRounds();
+        List<RoundResult> missing = rounds.stream()
+                .filter(round -> !roundResultRepository.existsByApplicationIdAndRoundId(application.getId(), round.getId()))
+                .map(round -> {
+                    RoundResult result = new RoundResult();
+                    result.setApplication(application);
+                    result.setRound(round);
+                    return result;
+                })
+                .toList();
+        if (!missing.isEmpty()) {
+            roundResultRepository.saveAll(missing);
+        }
     }
 }

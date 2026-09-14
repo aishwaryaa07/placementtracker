@@ -16,6 +16,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "round_results", uniqueConstraints = @UniqueConstraint(columnNames = {"application_id", "round_id"}))
 @Getter
@@ -41,4 +43,9 @@ public class RoundResult {
 
     @Column(length = 1000)
     private String remarks;
+
+    // The student's self-submitted score (via POST /api/student/round-results/{id}/score),
+    // for rounds where Round.minScore is set. Null if no score has been submitted, or the
+    // round is graded manually by admin instead.
+    private BigDecimal score;
 }

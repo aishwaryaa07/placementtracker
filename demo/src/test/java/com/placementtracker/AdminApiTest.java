@@ -130,13 +130,15 @@ class AdminApiTest extends AbstractIntegrationTest {
 
     @Test
     void nonAdminIsForbiddenFromAdminEndpoints() throws Exception {
+        // Authenticated, but wrong role -> 403 (they're a real, known user; they just can't do this).
         String studentToken = register("Plain Student", uniqueEmail("plain-student"), "password123");
 
         mockMvc.perform(get("/api/admin/companies").header("Authorization", "Bearer " + studentToken))
                 .andExpect(status().isForbidden());
 
+        // No token at all -> 401 (we don't know who this is yet).
         mockMvc.perform(get("/api/admin/companies"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -147,6 +149,101 @@ class AdminApiTest extends AbstractIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("companyId", 999999, "role", "Ghost"))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void duplicateRoundSequenceWithinTheSameDriveIsRejected() throws Exception {
+        String adminToken = registerAdmin("Admin Dup", uniqueEmail("admin-dup-seq"), "password123");
+        long companyId = createCompany(adminToken, "DupSeqCorp");
+        MvcResult driveResult = mockMvc.perform(post("/api/admin/drives")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("companyId", companyId, "role", "SDE"))))
+                .andReturn();
+        long driveId = objectMapper.readTree(driveResult.getResponse().getContentAsString()).get("id").asLong();
+
+        mockMvc.perform(post("/api/admin/drives/" + driveId + "/rounds")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("sequence", 1, "name", "OA"))))
+                .andExpect(status().isCreated());
+
+        // Same sequence, same drive -> rejected.
+        mockMvc.perform(post("/api/admin/drives/" + driveId + "/rounds")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("sequence", 1, "name", "Duplicate OA"))))
+                .andExpect(status().isBadRequest());
+
+        // Same sequence number is fine in a *different* drive - it's scoped per drive.
+        MvcResult driveResult2 = mockMvc.perform(post("/api/admin/drives")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("companyId", companyId, "role", "SDE-2"))))
+                .andReturn();
+        long driveId2 = objectMapper.readTree(driveResult2.getResponse().getContentAsString()).get("id").asLong();
+        mockMvc.perform(post("/api/admin/drives/" + driveId2 + "/rounds")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("sequence", 1, "name", "OA"))))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void updatingARoundToADuplicateSequenceIsRejectedButKeepingOwnSequenceWorks() throws Exception {
+        String adminToken = registerAdmin("Admin Dup2", uniqueEmail("admin-dup-seq2"), "password123");
+        long companyId = createCompany(adminToken, "DupSeqCorp2");
+        MvcResult driveResult = mockMvc.perform(post("/api/admin/drives")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("companyId", companyId, "role", "SDE"))))
+                .andReturn();
+        long driveId = objectMapper.readTree(driveResult.getResponse().getContentAsString()).get("id").asLong();
+
+        mockMvc.perform(post("/api/admin/drives/" + driveId + "/rounds")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("sequence", 1, "name", "OA"))));
+        MvcResult round2Result = mockMvc.perform(post("/api/admin/drives/" + driveId + "/rounds")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("sequence", 2, "name", "Tech"))))
+                .andReturn();
+        long round2Id = objectMapper.readTree(round2Result.getResponse().getContentAsString()).get("id").asLong();
+
+        // Trying to move round 2 onto round 1's sequence -> rejected.
+        mockMvc.perform(put("/api/admin/rounds/" + round2Id)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("sequence", 1, "name", "Tech"))))
+                .andExpect(status().isBadRequest());
+
+        // Updating round 2 while keeping its own sequence (2) unchanged -> still works.
+        mockMvc.perform(put("/api/admin/rounds/" + round2Id)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("sequence", 2, "name", "Technical Interview"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Technical Interview"));
+    }
+
+    @Test
+    void listingRoundsForUnknownDriveReturns404() throws Exception {
+        String adminToken = registerAdmin("Admin Five", uniqueEmail("admin-rounds-404"), "password123");
+
+        mockMvc.perform(get("/api/admin/drives/999999/rounds").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void creatingRoundForUnknownDriveReturns404() throws Exception {
+        String adminToken = registerAdmin("Admin Six", uniqueEmail("admin-round-create-404"), "password123");
+
+        mockMvc.perform(post("/api/admin/drives/999999/rounds")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("sequence", 1, "name", "OA"))))
                 .andExpect(status().isNotFound());
     }
 }

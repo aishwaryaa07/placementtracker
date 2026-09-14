@@ -1,6 +1,7 @@
 package com.placementtracker.repository;
 
 import com.placementtracker.model.Drive;
+import com.placementtracker.model.DriveApprovalStatus;
 import com.placementtracker.model.DriveStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -10,4 +11,6 @@ public interface DriveRepository extends JpaRepository<Drive, Long> {
     List<Drive> findByStatus(DriveStatus status);
     List<Drive> findByCompanyId(Long companyId);
     List<Drive> findByStatusNot(DriveStatus status);
+    List<Drive> findByApprovalStatus(DriveApprovalStatus approvalStatus);
+    List<Drive> findByStatusNotAndApprovalStatus(DriveStatus status, DriveApprovalStatus approvalStatus);
 }

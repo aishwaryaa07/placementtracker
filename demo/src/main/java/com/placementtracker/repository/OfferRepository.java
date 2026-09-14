@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface OfferRepository extends JpaRepository<Offer, Long> {
     Optional<Offer> findByApplicationId(Long applicationId);
+    long countByApplication_Drive_Id(Long driveId);
 }

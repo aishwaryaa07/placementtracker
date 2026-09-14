@@ -9,6 +9,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -68,10 +69,36 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // Without this, Spring Security's AnonymousAuthenticationFilter fills in an
+            // "anonymous" principal for every request, so a missing/invalid/expired token
+            // fails hasRole(...) the same way a wrong-role *authenticated* user does -
+            // both throw AccessDeniedException, so both came back as 403. Disabling it lets
+            // "no real authentication" surface as AuthenticationException instead, so the
+            // entry point below can correctly return 401 for that case and reserve 403 for
+            // an authenticated user who simply lacks the required role.
+            .anonymous(AbstractHttpConfigurer::disable)
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, ex) -> {
+                    response.setStatus(401);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"message\":\"Authentication required\"}");
+                })
+                .accessDeniedHandler((request, response, ex) -> {
+                    response.setStatus(403);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"message\":\"You do not have permission to access this resource\"}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/error").permitAll()
+                // Uploaded student documents (resume, marksheets) are served back by filename
+                // only - no directory listing, names are UUID-prefixed and unguessable. Not
+                // real access control, but proportionate to this app's existing security
+                // posture elsewhere (see FileStorageService's class comment).
+                .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/student/**").hasRole("STUDENT")
+                .requestMatchers("/api/interviewer/**").hasRole("INTERVIEWER")
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())

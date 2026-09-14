@@ -83,12 +83,12 @@ class AuthApiTest extends AbstractIntegrationTest {
     @Test
     void protectedEndpointWithoutTokenIsRejected() throws Exception {
         mockMvc.perform(get("/api/student/profile"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void protectedEndpointWithGarbageTokenIsRejected() throws Exception {
         mockMvc.perform(get("/api/student/profile").header("Authorization", "Bearer not-a-real-token"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }
