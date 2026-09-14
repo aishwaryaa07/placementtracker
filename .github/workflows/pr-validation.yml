@@ -22,7 +22,7 @@ jobs:
     - name: Check for required files
       run: |
         [ -f "demo/pom.xml" ] && echo "✓ Backend pom.xml found"
-        [ -f "frontend/package.json" ] && echo "✓ Frontend package.json found"
+        [ -f "placement-tracker-frontend/package.json" ] && echo "✓ Frontend package.json found"
         [ -f ".gitignore" ] && echo "✓ .gitignore found"
 
     - name: Comment on PR
@@ -62,6 +62,6 @@ jobs:
       with:
         node-version: '20.x'
         cache: 'npm'
-        cache-dependency-path: 'frontend/package-lock.json'
+        cache-dependency-path: 'placement-tracker-frontend/package-lock.json'
     - name: Install and build frontend
-      run: cd frontend && npm ci && npm run build
+      run: cd placement-tracker-frontend && npm ci && npm run build
